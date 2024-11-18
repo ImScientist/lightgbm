@@ -73,13 +73,13 @@ def objective_with_pruning_callback(trial, data_dir: str):
     return gbm.best_score["val"]["ndcg@5"]
 
 
-def hyperparameter_optimization(data_dir: str):
+def hyperparameter_optimization(data_dir: str, db_dir: str):
     """ Ex with Optuna """
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
     study = optuna.create_study(
-        storage='sqlite:///db.sqlite3',
+        storage=f'sqlite:///{db_dir}/db.sqlite3',
         pruner=optuna.pruners.PercentilePruner(
             percentile=50,
             n_startup_trials=8,

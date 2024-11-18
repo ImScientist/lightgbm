@@ -40,7 +40,9 @@ def preprocess_data_fn(data_dir_raw, data_dir_preprocessed):
 def hyperparameter_optimization_fn():
     """ Hyperparameter optimization """
 
-    hyperparameter_optimization(data_dir=DATA_DIR_PREPROCESSED)
+    hyperparameter_optimization(
+        data_dir=DATA_DIR_PREPROCESSED,
+        db_dir=OUTPUT_DIR)
 
 
 if __name__ == "__main__":
