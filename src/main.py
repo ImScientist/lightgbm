@@ -37,12 +37,16 @@ def preprocess_data_fn(data_dir_raw, data_dir_preprocessed):
 
 
 @cli.command('hyperparameter-optimization')
-def hyperparameter_optimization_fn():
+@click.option('--data-dir-preprocessed', type=str)
+@click.option('--storage', type=str)
+@click.option('--study-name', type=str)
+def hyperparameter_optimization_fn(data_dir_preprocessed, storage, study_name):
     """ Hyperparameter optimization """
 
     hyperparameter_optimization(
-        data_dir=DATA_DIR_PREPROCESSED,
-        db_dir=OUTPUT_DIR)
+        data_dir=data_dir_preprocessed,
+        storage=storage,
+        study_name=study_name)
 
 
 if __name__ == "__main__":
