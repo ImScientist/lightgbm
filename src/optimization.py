@@ -83,7 +83,6 @@ def hyperparameter_optimization(data_dir: str, storage: str, study_name: str):
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
     study = optuna.create_study(
-        # storage=f'sqlite:///{db_dir}/db.sqlite3',
         storage=storage,
         pruner=optuna.pruners.PercentilePruner(
             percentile=50,
