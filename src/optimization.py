@@ -1,23 +1,27 @@
+import logging
+
 import optuna
 import pandas as pd
 import lightgbm as lgb
 
 from joblib import parallel_backend
 from optuna.trial import TrialState
+from optuna.study import MaxTrialsCallback
 
 from preprocessing import get_data
+
+logger = logging.getLogger(__name__)
 
 
 def logging_callback(study, frozen_trial):
     previous_best_value = study.user_attrs.get("previous_best_value", None)
+
     if previous_best_value != study.best_value:
         study.set_user_attr("previous_best_value", study.best_value)
-        print(
-            "Trial {} finished with best value: {} "
-            "and parameters: {}. ".format(frozen_trial.number,
-                                          frozen_trial.value,
-                                          frozen_trial.params)
-        )
+
+        logger.info(f"Trial {frozen_trial.number} finished with "
+                    f"best value: {frozen_trial.value} "
+                    f"and parameters: {frozen_trial.params}. ")
 
 
 def objective_with_pruning_callback(trial, data_dir: str):
@@ -73,31 +77,31 @@ def objective_with_pruning_callback(trial, data_dir: str):
     return gbm.best_score["val"]["ndcg@5"]
 
 
-def hyperparameter_optimization(data_dir: str, db_dir: str):
+def hyperparameter_optimization(data_dir: str, storage: str, study_name: str):
     """ Ex with Optuna """
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
     study = optuna.create_study(
-        storage=f'sqlite:///{db_dir}/db.sqlite3',
+        storage=storage,
         pruner=optuna.pruners.PercentilePruner(
             percentile=50,
             n_startup_trials=8,
             n_warmup_steps=50,
             interval_steps=50,
             n_min_trials=8),
-        study_name='optimize_ranking',
+        study_name=study_name,
         direction='maximize',
-        load_if_exists=False)
+        load_if_exists=True)
 
     with parallel_backend('multiprocessing'):
         study.optimize(
             lambda x: objective_with_pruning_callback(x, data_dir=data_dir),
             n_trials=20,
-            n_jobs=4,
+            n_jobs=2,
             gc_after_trial=True,
-            # callbacks=[logging_callback]
-        )
+            callbacks=[MaxTrialsCallback(10, states=(TrialState.COMPLETE,)),
+                       logging_callback])
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
