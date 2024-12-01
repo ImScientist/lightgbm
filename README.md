@@ -84,10 +84,9 @@ Hyperparameter optimization with Optuna.
     --runtime=nvidia --gpus=all --name=testlightgbm -p 8888:8888 \
     -v $DATA_DIR_RAW:/data/raw \
     -v myvolume:/data/preprocessed \
-    -v "$(pwd)/src:/home/src" \
+    -v "$(pwd)/notebooks:/home/notebooks" \
     lightgbm-gpu:latest
   ``` 
-    - If you want to make an OpenCL-based build targeting a wide range of GPUs you have to replace
-      `-DUSE_CUDA=1` with `-DUSE_GPU=1` in the `Dockerfile.gpu`.
-    - To enable training on the GPU add to lgb_parameters dict the option `'device_type': 'cuda'` or
-      `'device_type': 'gpu'` depending on the image build. 
+    - To enable training on the GPU add to the `lgbm_parameters` dict the option `'device_type': 'gpu'`.
+    - I have tried to build lightgbm with the option `-DUSE_CUDA=1` instead of `-DUSE_GPU=1` but this didn't allow me to
+      use `'device_type': 'cuda'`.

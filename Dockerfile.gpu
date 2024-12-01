@@ -103,7 +103,7 @@ ARG LIGHTGBM_TAG=v4.5.0
 RUN cd /usr/local/src && mkdir lightgbm && cd lightgbm && \
     git clone --recursive --branch "${LIGHTGBM_TAG}" --depth 1 https://github.com/microsoft/LightGBM && \
     cd LightGBM && \
-    cmake -B build -S . -DUSE_CUDA=1 \
+    cmake -B build -S . -DUSE_GPU=1 \
       -DOpenCL_LIBRARY=/usr/local/cuda/lib64/libOpenCL.so.1 \
       -DOpenCL_INCLUDE_DIR=/usr/local/cuda/include/ && \
     OPENCL_HEADERS=/usr/local/cuda-12.2/targets/x86_64-linux/include \
