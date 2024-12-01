@@ -74,3 +74,19 @@ Hyperparameter optimization with Optuna.
   
   # TODO: check and, eventually, clean the persistent volumes
   ```
+
+- Docker image for CUDA-enabled LightGBM:
+  ```shell
+  docker build -t lightgbm-gpu -f Dockerfile.gpu .
+  
+  # Start a jupyter server; password: keras
+  docker run -it --rm \
+    --runtime=nvidia --gpus=all --name=testlightgbm -p 8888:8888 \
+    -v $DATA_DIR_RAW:/data/raw \
+    -v myvolume:/data/preprocessed \
+    -v "$(pwd)/notebooks:/home/notebooks" \
+    lightgbm-gpu:latest
+  ``` 
+    - To enable training on the GPU add to the `lgbm_parameters` dict the option `'device_type': 'gpu'`.
+    - I have tried to build lightgbm with the option `-DUSE_CUDA=1` instead of `-DUSE_GPU=1` but this didn't allow me to
+      use `'device_type': 'cuda'`.
