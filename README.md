@@ -9,7 +9,7 @@ Hyperparameter optimization with Optuna.
   ├── train.txt
   ├── vali.txt
   └── test.txt
-  ```
+  ``` 
 
 - Build image:
   ```shell
@@ -74,3 +74,20 @@ Hyperparameter optimization with Optuna.
   
   # TODO: check and, eventually, clean the persistent volumes
   ```
+
+- Docker image for CUDA-enabled LightGBM:
+  ```shell
+  docker build -t lightgbm-gpu -f Dockerfile.gpu .
+  
+  # Start a jupyter server; password: keras
+  docker run -it --rm \
+    --runtime=nvidia --gpus=all --name=testlightgbm -p 8888:8888 \
+    -v $DATA_DIR_RAW:/data/raw \
+    -v myvolume:/data/preprocessed \
+    -v "$(pwd)/src:/home/src" \
+    lightgbm-gpu:latest
+  ``` 
+    - If you want to make an OpenCL-based build targeting a wide range of GPUs you have to replace
+      `-DUSE_CUDA=1` with `-DUSE_GPU=1` in the `Dockerfile.gpu`.
+    - To enable training on the GPU add to lgb_parameters dict the option `'device_type': 'cuda'` or
+      `'device_type': 'gpu'` depending on the image build. 

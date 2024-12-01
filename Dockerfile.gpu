@@ -1,0 +1,131 @@
+FROM nvidia/cuda:12.2.2-devel-ubuntu22.04
+
+#################################################################################################################
+#           Global
+#################################################################################################################
+# apt-get to skip any interactive post-install configuration steps with DEBIAN_FRONTEND=noninteractive and apt-get install -y
+
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+ARG DEBIAN_FRONTEND=noninteractive
+
+#################################################################################################################
+#           Global Path Setting
+#################################################################################################################
+
+ENV CUDA_HOME /usr/local/cuda
+ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${CUDA_HOME}/lib64
+ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/usr/local/lib
+
+ENV OPENCL_LIBRARIES /usr/local/cuda/lib64
+ENV OPENCL_INCLUDE_DIR /usr/local/cuda/include
+
+#################################################################################################################
+#           TINI (I might not need it at all)
+#################################################################################################################
+
+# Install tini
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+
+#################################################################################################################
+#           SYSTEM
+#################################################################################################################
+# update: downloads the package lists from the repositories and "updates" them to get information on the
+# newest versions of packages and their dependencies. It will do this for all repositories and PPAs.
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    bzip2 \
+    ca-certificates \
+    libglib2.0-0 \
+    libxext6 \
+    libsm6 \
+    libxrender1 \
+    git \
+    vim \
+    mercurial \
+    subversion \
+    cmake \
+    libboost-dev \
+    libboost-system-dev \
+    libboost-filesystem-dev \
+    gcc \
+    g++ \
+    make \
+    libssl-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    wget \
+    llvm \
+    libncurses5-dev \
+    xz-utils \
+    tk-dev \
+    libxml2-dev \
+    libxmlsec1-dev \
+    libffi-dev \
+    liblzma-dev
+
+# Add OpenCL ICD files for LightGBM
+RUN mkdir -p /etc/OpenCL/vendors && \
+    echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
+
+#################################################################################################################
+#           pyenv
+#################################################################################################################
+
+ARG PYENV_TAG=v2.4.19
+RUN git clone -b "${PYENV_TAG}" --single-branch --depth 1 https://github.com/pyenv/pyenv.git .pyenv
+
+ENV PYENV_ROOT="$HOME/.pyenv"
+ENV PATH="${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:${PATH}"
+
+ENV PYTHON_VERSION=3.12.7
+RUN pyenv install ${PYTHON_VERSION}
+RUN pyenv global ${PYTHON_VERSION}
+
+
+COPY requirements_gpu.txt ./requirements.txt
+
+RUN pip install -r requirements.txt --no-cache-dir && \
+    rm requirements.txt
+
+##################################################################################################################
+#            LightGBM
+##################################################################################################################
+
+ARG LIGHTGBM_TAG=v4.5.0
+
+RUN cd /usr/local/src && mkdir lightgbm && cd lightgbm && \
+    git clone --recursive --branch "${LIGHTGBM_TAG}" --depth 1 https://github.com/microsoft/LightGBM && \
+    cd LightGBM && \
+    cmake -B build -S . -DUSE_CUDA=1 \
+      -DOpenCL_LIBRARY=/usr/local/cuda/lib64/libOpenCL.so.1 \
+      -DOpenCL_INCLUDE_DIR=/usr/local/cuda/include/ && \
+    OPENCL_HEADERS=/usr/local/cuda-12.2/targets/x86_64-linux/include \
+    LIBOPENCL=/usr/local/cuda-12.2/targets/x86_64-linux/lib \
+    cmake --build build
+
+ENV PATH /usr/local/src/lightgbm/LightGBM:${PATH}
+
+RUN /bin/bash -c "cd /usr/local/src/lightgbm/LightGBM && sh ./build-python.sh install --precompile"
+
+##################################################################################################################
+#            JUPYTER
+##################################################################################################################
+
+WORKDIR /home
+
+COPY src ./src
+
+ENV PYTHONPATH=/home:/home/src
+
+EXPOSE 8888
+
+## password: keras
+## password key: --NotebookApp.password='sha1:98b767162d34:8da1bc3c75a0f29145769edc977375a373407824'
+CMD ["jupyter", "notebook", "--ip", "0.0.0.0", "--no-browser", "--allow-root", "--NotebookApp.password='sha1:98b767162d34:8da1bc3c75a0f29145769edc977375a373407824'"]
