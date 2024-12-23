@@ -1,6 +1,6 @@
 # lightgbm
 
-Hyperparameter optimization with Optuna.
+## 1. Hyperparameter optimization with Optuna.
 
 - Data: we use a single fold of the [MSLR-WEB30k](https://www.microsoft.com/en-us/research/project/mslr/) dataset,
   and store it in `$DATA_DIR_RAW`. Expected folder structure:
@@ -75,7 +75,9 @@ Hyperparameter optimization with Optuna.
   # TODO: check and, eventually, clean the persistent volumes
   ```
 
-- Docker image for CUDA-enabled LightGBM:
+## 2. CUDA-enabled LightGBM:
+
+- Docker image:
   ```shell
   docker build -t lightgbm-gpu -f Dockerfile.gpu .
   
@@ -87,6 +89,21 @@ Hyperparameter optimization with Optuna.
     -v "$(pwd)/notebooks:/home/notebooks" \
     lightgbm-gpu:latest
   ``` 
-    - To enable training on the GPU add to the `lgbm_parameters` dict the option `'device_type': 'gpu'`.
-    - I have tried to build lightgbm with the option `-DUSE_CUDA=1` instead of `-DUSE_GPU=1` but this didn't allow me to
-      use `'device_type': 'cuda'`.
+- To enable training on the GPU add to the `lgbm_parameters` dict the option `'device_type': 'gpu'`.
+- I have tried to build lightgbm with the option `-DUSE_CUDA=1` instead of `-DUSE_GPU=1` but this didn't allow me to
+  use `'device_type': 'cuda'`.
+- To test the GPU we have used the [Higgs](https://archive.ics.uci.edu/dataset/280/higgs) dataset (11e6 data points).
+  Even though during training we were seeing log-messages like those listed below, the use of a GPU didn't speed up the
+  training.
+  ```shell
+  [LightGBM] [Info] This is the GPU trainer!!
+  [LightGBM] [Info] Total Bins 1524
+  [LightGBM] [Info] Number of data points in the train set: 10500000, number of used features: 28
+  [LightGBM] [Info] Using GPU Device: NVIDIA GeForce RTX 3090, Vendor: NVIDIA Corporation
+  [LightGBM] [Info] Compiling OpenCL Kernel with 64 bins...
+  [LightGBM] [Info] GPU programs have been built
+  [LightGBM] [Info] Size of histogram bin entry: 8
+  [LightGBM] [Info] 28 dense feature groups (280.38 MB) transferred to GPU in 0.201267 secs. 0 sparse feature groups
+  ```
+  In addition, all CPU cores were persistently utilized at around 50% and GPU utilization was never above 7% which was
+  close to its idle state.
